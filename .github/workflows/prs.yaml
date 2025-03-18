@@ -8,10 +8,9 @@ on:
 jobs:
   tests:
     name: Tests on ${{ matrix.arch }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [ amd64, arm64 ]
+    runs-on:
+      - ubuntu-latest
+      - ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
       - name: Tests
