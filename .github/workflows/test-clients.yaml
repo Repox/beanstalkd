@@ -6,20 +6,28 @@ jobs:
   build:
     name: Build beanstalkd
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [ amd64, arm64 ]
     steps:
       - uses: actions/checkout@v4
       - run: make
       - uses: actions/upload-artifact@v4
         with:
-          name: beanstalkd
-          path: beanstalkd
+          name: beanstalkd-${{ matrix.arch }}
+          path: beanstalkd-${{ matrix.arch }}
   pheanstalk:
     name: Test Pheanstalk PHP
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [ amd64, arm64 ]
     continue-on-error: true
     needs:
       - build
     steps:
+      - name: Verify architecture
+        run: uname -m
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -27,9 +35,9 @@ jobs:
           tools: phpunit
       - uses: actions/download-artifact@v4
         with:
-          name: beanstalkd
-      - name: Start beanstalkd
-        run: chmod +x ./beanstalkd && ./beanstalkd &
+          name: beanstalkd-${{ matrix.arch }}
+      - name: Start beanstalkd for ${{ matrix.arch }}
+        run: chmod +x ./beanstalkd-${{ matrix.arch }} && ./beanstalkd-${{ matrix.arch }} &
       - uses: actions/checkout@v4
         with:
           repository: pheanstalk/pheanstalk
@@ -47,6 +55,7 @@ jobs:
     strategy:
       matrix:
         python-version: [ 3.9 ]
+        arch: [ amd64, arm64 ]
     needs:
       - build
     steps:
@@ -61,11 +70,11 @@ jobs:
         id: download
         with:
           #include-hidden-files: true
-          name: beanstalkd
-      - name: Make beanstalkd executable
-        run: chmod +x ${{steps.download.outputs.download-path}}/beanstalkd
+          name: beanstalkd-${{ matrix.arch }}
+      - name: Make beanstalkd executable for ${{ matrix.arch }}
+        run: chmod +x ${{steps.download.outputs.download-path}}/beanstalkd-${{ matrix.arch }}
       - name: Run beanstalkd -v
-        run: ${{steps.download.outputs.download-path}}/beanstalkd -v
+        run: ${{steps.download.outputs.download-path}}/beanstalkd-${{ matrix.arch }} -v
 
       - name: Install dependencies
         run: |
@@ -73,7 +82,7 @@ jobs:
           pip install .
       - name: Run tests
         env:
-          BEANSTALKD_PATH: ${{steps.download.outputs.download-path}}/beanstalkd
+          BEANSTALKD_PATH: ${{steps.download.outputs.download-path}}/beanstalkd-${{ matrix.arch }}
         run: make test
   pystalk:
     name: Test Pystalk Python
@@ -82,6 +91,7 @@ jobs:
     strategy:
       matrix:
         python-version: [ "3.10" ]
+        arch: [ amd64, arm64 ]
     needs:
       - build
     steps:
@@ -95,14 +105,14 @@ jobs:
       - uses: actions/download-artifact@v4
         id: download
         with:
-          name: beanstalkd
-      - name: Make beanstalkd executable
-        run: chmod +x ${{steps.download.outputs.download-path}}/beanstalkd
+          name: beanstalkd-${{ matrix.arch }}
+      - name: Make beanstalkd executable for ${{ matrix.arch }}
+        run: chmod +x ${{steps.download.outputs.download-path}}/beanstalkd-${{ matrix.arch }}
       - name: Run beanstalkd -v
-        run: ${{steps.download.outputs.download-path}}/beanstalkd -v
+        run: ${{steps.download.outputs.download-path}}/beanstalkd-${{ matrix.arch }} -v
       - name: Install dependencies
         run: python -m pip install -r requirements-tests.txt -e .
       - name: Run tests
         env:
-          BEANSTALKD_PATH: ${{steps.download.outputs.download-path}}/beanstalkd
+          BEANSTALKD_PATH: ${{steps.download.outputs.download-path}}/beanstalkd-${{ matrix.arch }}
         run: pytest tests/
