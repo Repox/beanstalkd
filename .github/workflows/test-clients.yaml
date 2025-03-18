@@ -5,23 +5,23 @@ on:
 jobs:
   build:
     name: Build beanstalkd
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        arch: [ amd64, arm64 ]
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
     steps:
       - uses: actions/checkout@v4
       - run: make
       - uses: actions/upload-artifact@v4
         with:
-          name: beanstalkd-${{ matrix.arch }}
+          name: beanstalkd-${{ matrix.runner }}
           path: beanstalkd
   pheanstalk:
     name: Test Pheanstalk PHP
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        arch: [ amd64, arm64 ]
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
     continue-on-error: true
     needs:
       - build
@@ -35,9 +35,9 @@ jobs:
           tools: phpunit
       - uses: actions/download-artifact@v4
         with:
-          name: beanstalkd-${{ matrix.arch }}
-      - name: Start beanstalkd for ${{ matrix.arch }}
-        run: chmod +x ./beanstalkd-${{ matrix.arch }} && ./beanstalkd-${{ matrix.arch }} &
+          name: beanstalkd-${{ matrix.runner }}
+      - name: Start beanstalkd for ${{ matrix.runner }}
+        run: chmod +x ./beanstalkd && ./beanstalkd &
       - uses: actions/checkout@v4
         with:
           repository: pheanstalk/pheanstalk
@@ -50,12 +50,12 @@ jobs:
           SERVER_HOST: localhost
   greenstalk:
     name: Test Greenstalk Python
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     continue-on-error: true
     strategy:
       matrix:
         python-version: [ 3.9 ]
-        arch: [ amd64, arm64 ]
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
     needs:
       - build
     steps:
@@ -70,11 +70,11 @@ jobs:
         id: download
         with:
           #include-hidden-files: true
-          name: beanstalkd-${{ matrix.arch }}
-      - name: Make beanstalkd executable for ${{ matrix.arch }}
-        run: chmod +x ${{steps.download.outputs.download-path}}/beanstalkd-${{ matrix.arch }}
+          name: beanstalkd-${{ matrix.runner }}
+      - name: Make beanstalkd executable for ${{ matrix.runner }}
+        run: chmod +x ${{steps.download.outputs.download-path}}-${{ matrix.runner }}/beanstalkd
       - name: Run beanstalkd -v
-        run: ${{steps.download.outputs.download-path}}/beanstalkd-${{ matrix.arch }} -v
+        run: ${{steps.download.outputs.download-path}}-${{ matrix.runner }}/beanstalkd -v
 
       - name: Install dependencies
         run: |
@@ -82,16 +82,16 @@ jobs:
           pip install .
       - name: Run tests
         env:
-          BEANSTALKD_PATH: ${{steps.download.outputs.download-path}}/beanstalkd-${{ matrix.arch }}
+          BEANSTALKD_PATH: ${{steps.download.outputs.download-path}}-${{ matrix.runner }}/beanstalkd
         run: make test
   pystalk:
     name: Test Pystalk Python
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     continue-on-error: true
     strategy:
       matrix:
         python-version: [ "3.10" ]
-        arch: [ amd64, arm64 ]
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
     needs:
       - build
     steps:
@@ -105,14 +105,14 @@ jobs:
       - uses: actions/download-artifact@v4
         id: download
         with:
-          name: beanstalkd-${{ matrix.arch }}
-      - name: Make beanstalkd executable for ${{ matrix.arch }}
-        run: chmod +x ${{steps.download.outputs.download-path}}/beanstalkd-${{ matrix.arch }}
+          name: beanstalkd-${{ matrix.runner }}
+      - name: Make beanstalkd executable for ${{ matrix.runner }}
+        run: chmod +x ${{steps.download.outputs.download-path}}-${{ matrix.runner }}/beanstalkd
       - name: Run beanstalkd -v
-        run: ${{steps.download.outputs.download-path}}/beanstalkd-${{ matrix.arch }} -v
+        run: ${{steps.download.outputs.download-path}}-${{ matrix.runner }}/beanstalkd -v
       - name: Install dependencies
         run: python -m pip install -r requirements-tests.txt -e .
       - name: Run tests
         env:
-          BEANSTALKD_PATH: ${{steps.download.outputs.download-path}}/beanstalkd-${{ matrix.arch }}
+          BEANSTALKD_PATH: ${{steps.download.outputs.download-path}}-${{ matrix.runner }}/beanstalkd
         run: pytest tests/
