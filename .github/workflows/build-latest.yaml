@@ -6,8 +6,11 @@ on:
       - 'v*'
 jobs:
   tests:
-    name: Tests
+    name: Tests on ${{ matrix.arch }}
     runs-on: ubuntu-latest
+    strategy:
+        matrix:
+            arch: [amd64, arm64]
     steps:
       - uses: actions/checkout@v4
       - name: Tests
