@@ -15,7 +15,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: beanstalkd-${{ matrix.arch }}
-          path: beanstalkd-${{ matrix.arch }}
+          path: beanstalkd
   pheanstalk:
     name: Test Pheanstalk PHP
     runs-on: ubuntu-latest
